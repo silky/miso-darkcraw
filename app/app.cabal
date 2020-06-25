@@ -36,6 +36,7 @@ executable app
     lens,
     generic-lens,
     miso,
+    mtl,
     text,
     tree-diff
   if !impl(ghcjs)
