@@ -38,7 +38,7 @@ import Miso.String hiding (length)
 import Model
 import Turn (turnToInt, turnToPlayerSpot)
 import Update
-import ViewBlocks (gui, textButton)
+import ViewBlocks (GUI, textButton)
 import ViewInternal
 
 errView :: GameModel -> Int -> [View Action]
@@ -94,7 +94,6 @@ turnView model@GameModel {turn} z =
         [img_ [src_ (assetsPath $ "24x24_" <> playerImgY <> "_2.png")]]
     line3 :: [View Action] =
       textButton
-        gui
         z
         True
         [ topMarginAttr,
@@ -105,7 +104,7 @@ turnView model@GameModel {turn} z =
 -- | The widget showing the number of cards in the stack
 stackView :: GameModel -> Int -> View Action
 stackView model@GameModel {board, playingPlayer} z =
-  div_ [positionStyle] $ textButton gui z True [] $ ms stackSize
+  div_ [positionStyle] $ textButton z True [] $ ms stackSize
   where
     off = cellPixelSize `div` 2
     positionStyle =
