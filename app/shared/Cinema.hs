@@ -16,13 +16,16 @@ module Cinema
     Frame (..),
     ActorState (..),
     Scene (..),
+    Sprite (),
     StayChange,
+    SpriteChange,
     TellingChange,
     TimedFrame (..),
     (=:),
     (|||),
     at,
     at',
+    creatureSprite,
     defaultDirection,
     display,
     down,
@@ -34,6 +37,7 @@ module Cinema
     right,
     shutup,
     tell,
+    tileSprite,
     up,
     while,
   )
@@ -56,9 +60,20 @@ data Direction = ToLeft | ToRight -- Suffix with 'To' to avoid clashing with Eit
 defaultDirection :: Direction
 defaultDirection = ToLeft -- How sprite are in oryx' set
 
+creatureSprite :: CreatureID -> Sprite
+creatureSprite = Left
+
+tileSprite :: Tile -> Sprite
+tileSprite = Right
+
+-- Sufficient data to obtain a sprite
+type Sprite = Either CreatureID Tile
+
 data ActorState = ActorState
   { -- | In which direction the sprite is looking at
     direction :: Direction,
+    -- | How to draw this actor
+    sprite :: Sprite,
     -- | Whether the element says something
     telling :: Maybe String,
     -- | 0 means on the left
@@ -68,10 +83,11 @@ data ActorState = ActorState
   }
   deriving (Eq, Generic, Ord, Show)
 
-defaultActorState :: ActorState
-defaultActorState =
+defaultActorState :: Sprite -> ActorState
+defaultActorState sprite =
   ActorState
     { direction = defaultDirection,
+      sprite = sprite,
       telling = Nothing,
       x = 0,
       y = 0
@@ -127,10 +143,15 @@ instance Semigroup TellingChange where
 instance Monoid TellingChange where
   mempty = NoTellingChange
 
+data SpriteChange = SetSprite Sprite | NoSpriteChange
+  deriving (Eq, Generic, Ord, Show)
+
 -- | The change to an actor's 'ActorState'
 data StayChange = StayChange
   { -- | The change to 'direction'
     turn :: DirectionChange,
+    -- | The change to the sprite
+    spriteChange :: SpriteChange,
     -- | The change to 'telling'
     tellingChange :: TellingChange,
     -- | The change to 'x'
@@ -140,12 +161,19 @@ data StayChange = StayChange
   }
   deriving (Eq, Generic, Ord, Show)
 
+instance Semigroup SpriteChange where
+  s <> NoSpriteChange = s
+  _ <> s = s
+
+instance Monoid SpriteChange where
+  mempty = NoSpriteChange
+
 instance Semigroup StayChange where
-  (StayChange turn1 tell1 dx1 dy1) <> (StayChange turn2 tell2 dx2 dy2) =
-    StayChange (turn1 <> turn2) (tell1 <> tell2) (dx1 + dx2) (dy1 + dy2)
+  (StayChange turn1 sprite1 tell1 dx1 dy1) <> (StayChange turn2 sprite2 tell2 dx2 dy2) =
+    StayChange (turn1 <> turn2) (sprite1 <> sprite2) (tell1 <> tell2) (dx1 + dx2) (dy1 + dy2)
 
 instance Monoid StayChange where
-  mempty = StayChange mempty mempty 0 0
+  mempty = StayChange mempty mempty mempty 0 0
 
 data ActorChange
   = -- | Actor leaves the stage
@@ -160,26 +188,33 @@ instance Semigroup ActorChange where
 instance Monoid ActorChange where
   mempty = Stay mempty
 
-mkChange :: DirectionChange -> TellingChange -> Int -> Int -> ActorChange
-mkChange turn tellingChange xoffset yoffset = Stay StayChange {..}
+mkChange :: Sprite -> DirectionChange -> TellingChange -> Int -> Int -> ActorChange
+mkChange sprite turn tellingChange xoffset yoffset =
+  Stay StayChange {spriteChange = SetSprite sprite, ..}
 
-at :: Int -> Int -> ActorChange
-at x y = Stay mempty {xoffset = x, yoffset = y}
+-- | Use this function to initialize an 'Element'
+at :: Sprite -> Int -> Int -> ActorChange
+at sprite x y = Stay mempty {spriteChange = SetSprite sprite, xoffset = x, yoffset = y}
 
-at' :: Direction -> Int -> Int -> ActorChange
-at' dir x y = Stay mempty {turn = turnFrom dir, xoffset = x, yoffset = y}
+-- | Use this function to initialize an 'Element'
+at' :: Sprite -> Direction -> Int -> Int -> ActorChange
+at' sprite dir x y =
+  Stay mempty {spriteChange = SetSprite sprite, turn = turnFrom dir, xoffset = x, yoffset = y}
   where
     turnFrom ToRight = TurnRight
     turnFrom ToLeft = TurnLeft
 
+shift :: Int -> Int -> ActorChange
+shift x y = Stay mempty {xoffset = x, yoffset = y}
+
 down :: ActorChange
-down = at 0 1
+down = shift 0 1
 
 left :: ActorChange
-left = at (-1) 0
+left = shift (-1) 0
 
 right :: ActorChange
-right = at 1 0
+right = shift 1 0
 
 shutup :: ActorChange
 shutup = Stay mempty {tellingChange = ShutUp}
@@ -188,7 +223,7 @@ tell :: String -> ActorChange
 tell s = Stay mempty {tellingChange = Tell s}
 
 up :: ActorChange
-up = at 0 (-1)
+up = shift 0 (-1)
 
 initial :: TimedFrame ActorChange -> TimedFrame ActorState
 initial tframe = patch (TimedFrame 0 (Frame mempty)) tframe
@@ -206,12 +241,24 @@ patch
       buildActorState e =
         ( e,
           case (prev Map.!? e, diff Map.!? e) of
-            (_, Just Leave) -> Nothing
-            (Nothing, Just c) -> patchActorState defaultActorState c -- No previous state, consider diff as absolute
-            (Just p, Just c) -> patchActorState p c -- Apply diff
-            (p, Nothing) -> p -- No diff: keep previous state
+            (_, Just Leave) ->
+              Nothing
+            (Nothing, Just c) ->
+              -- No previous state, consider diff as absolute
+              patchActorState (defaultActorState $ unsafeSpriteOf c) c
+            (Just p, Just c) ->
+              -- Apply diff
+              patchActorState p c
+            (p, Nothing) ->
+              -- No diff: keep previous state
+              p
         )
       frame'' = Map.mapMaybe id frame'
+      unsafeSpriteOf Leave = error "Sprite of leaving actor should not be requested"
+      unsafeSpriteOf (Stay StayChange {spriteChange}) =
+        case spriteChange of
+          SetSprite sprite -> sprite
+          NoSpriteChange -> error "Actor has no initial Sprite"
 
 patchActorState :: ActorState -> ActorChange -> Maybe ActorState
 patchActorState s@ActorState {..} (Stay StayChange {..}) =

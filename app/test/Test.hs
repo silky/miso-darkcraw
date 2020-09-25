@@ -93,27 +93,31 @@ testParallelSceneComposition =
     $ it "interleaves events in the expected order"
     $ scenes1 ||| scenes2 `shouldBe` expectedMergedScenes
   where
+    cid0 :: CreatureID
+    cid0 = CreatureID Skeleton Undead
     w0 :: Element
-    w0 = Actor 0 $ CreatureID Skeleton Undead
+    w0 = Actor 0 cid0
+    cid1 :: CreatureID
+    cid1 = CreatureID Skeleton Undead
     w1 :: Element
-    w1 = Actor 1 $ CreatureID Skeleton Undead
+    w1 = Actor 1 cid1
     scenes1 :: Scene ActorChange
     scenes1 =
       mconcat
-        [ while 1 (w0 =: Cinema.at 0 0),
+        [ while 1 (w0 =: Cinema.at (Cinema.creatureSprite cid0) 0 0),
           while 3 (w0 =: right),
           while 1 (w0 =: left)
         ]
     scenes2 :: Scene ActorChange
     scenes2 =
       mconcat
-        [ while 2 (w1 =: Cinema.at 1 1),
+        [ while 2 (w1 =: Cinema.at (Cinema.creatureSprite cid1) 1 1),
           while 4 (w1 =: right)
         ]
     expectedMergedScenes :: Scene ActorChange
     expectedMergedScenes =
       mconcat
-        [ while 1 (w0 =: Cinema.at 0 0 <> w1 =: Cinema.at 1 1),
+        [ while 1 (w0 =: Cinema.at (Cinema.creatureSprite cid0) 0 0 <> w1 =: Cinema.at (Cinema.creatureSprite cid1) 1 1),
           while 1 (w0 =: right),
           while 2 (w1 =: right),
           while 2 (w0 =: left)

@@ -176,7 +176,7 @@ stateToAttribute z ActorState {x, y} =
       <> "z-index" =: ms z
 
 viewEntry :: Context -> Element -> ActorState -> [View a]
-viewEntry Context {..} element state@ActorState {direction, telling} =
+viewEntry Context {..} element state@ActorState {direction, telling, sprite} =
   case element of
     Actor _ cid ->
       [div_ [stateToAttribute z state] [imgCell path]]
