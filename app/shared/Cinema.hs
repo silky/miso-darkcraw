@@ -93,10 +93,8 @@ defaultActorState sprite =
       y = 0
     }
 
-data Element
-  = -- The actor's unique identifier, and its tile
-    Actor Int CreatureID
-  | TileElement Tile
+-- An actor's unique identifier
+newtype Element = Element {unElement :: Int}
   deriving (Eq, Generic, Ord, Show)
 
 newtype Frame a = Frame {unFrame :: Map.Map Element a}

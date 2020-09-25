@@ -15,19 +15,19 @@ cid0 :: CreatureID
 cid0 = CreatureID General Human
 
 w0 :: Element
-w0 = Actor 0 cid0
+w0 = Element 0
 
 cid01 :: CreatureID
 cid01 = CreatureID Spearman Human
 
 w01 :: Element
-w01 = Actor 2 cid01
+w01 = Element 2
 
 cid02 :: CreatureID
 cid02 = CreatureID Archer Human
 
 w02 :: Element
-w02 = Actor 3 cid02
+w02 = Element 3
 
 allw0right :: Frame ActorChange
 allw0right = w0 =: right <> w01 =: right <> w02 =: right
@@ -36,19 +36,19 @@ cid1 :: CreatureID
 cid1 = CreatureID Vampire Undead
 
 w1 :: Element
-w1 = Actor 1 cid1
+w1 = Element 1
 
 cid10 :: CreatureID
 cid10 = CreatureID Skeleton Undead
 
 w10 :: Element
-w10 = Actor 4 $cid10
+w10 = Element 4
 
-whiteAppears :: Int -> Int -> [Frame ActorChange]
-whiteAppears x y =
+whiteAppears :: Int -> Int -> Int -> [Frame ActorChange]
+whiteAppears i x y =
   map f [WhiteAppears0, WhiteAppears1, WhiteAppears2, WhiteAppears3, WhiteAppears4]
   where
-    f tile = TileElement tile =: at (tileSprite tile) x y
+    f tile = Element i =: at (tileSprite tile) x y
 
 welcomeGhostMovie1 :: Scene ActorChange
 welcomeGhostMovie1 =
@@ -68,7 +68,7 @@ welcomeGhostMovie1 =
     ]
   where
     cid = CreatureID Ghost Undead
-    g = Actor 5 cid
+    g = Element 5
 
 welcomeGhostMovie2 :: Scene ActorChange
 welcomeGhostMovie2 =
@@ -90,7 +90,7 @@ welcomeGhostMovie2 =
     ]
   where
     cid = CreatureID Ghost Undead
-    g = Actor 6 cid
+    g = Element 6
 
 welcomeFightMovie :: Scene ActorChange
 welcomeFightMovie =
@@ -115,7 +115,7 @@ welcomeFightMovie =
     ]
     <> while 5 (w1 =: tell "iugp9b7")
     <> while 1 (w1 =: shutup)
-    <> foldMap (while 2) (whiteAppears 12 11)
+    <> foldMap (while 2) (whiteAppears 7 12 11)
     <> while 10 (w10 =: at (creatureSprite cid10) 12 11)
 
 welcomeMovie :: Scene ActorChange

@@ -177,22 +177,17 @@ stateToAttribute z ActorState {x, y} =
 
 viewEntry :: Context -> Element -> ActorState -> [View a]
 viewEntry Context {..} element state@ActorState {direction, telling, sprite} =
-  case element of
-    Actor _ cid ->
-      [div_ [stateToAttribute z state] [imgCell path]]
-        ++ [ div_ [bubbleStyle state] [text $ ms $ fromJust telling]
-             | isJust telling
-           ]
-      where
-        path =
-          case paths Map.!? cid of
-            Nothing -> error $ "CreatureID has no corresponding filename: " ++ show cid
-            Just dirToPath -> dirToPath direction
-    TileElement tile ->
-      [div_ [stateToAttribute z state] [imgCell path]]
-      where
-        path = tileToFilepath shared tile & filepathToString & ms
+  [div_ [stateToAttribute z state] [imgCell path]]
+    ++ [ div_ [bubbleStyle state] [text $ ms $ fromJust telling]
+         | isJust telling
+       ]
   where
+    path = case sprite of
+      Left cid ->
+        case paths Map.!? cid of
+          Nothing -> error $ "CreatureID has no corresponding filename: " ++ show cid
+          Just dirToPath -> dirToPath direction
+      Right tile -> tileToFilepath shared tile & filepathToString & ms
     bubbleStyle ActorState {x, y} =
       style_ $
         "position" =: "absolute"
