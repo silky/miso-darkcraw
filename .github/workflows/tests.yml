@@ -1,0 +1,15 @@
+name: tests
+
+on: [push]
+
+jobs:
+  runhaskell:
+    name: Hello World
+    runs-on: ubuntu-latest # or macOS-latest, or windows-latest
+    steps:
+      - uses: actions/checkout@v2
+      - uses: haskell/actions/setup@v1
+        with:
+          ghc-version: '8.6.4'
+          cabal-version: '3.0.0.0' # Exact version of Cabal
+      - run: cd app && cabal test
